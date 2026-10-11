@@ -54,6 +54,13 @@ exécuter Django, donc la clé du correcteur, la solution officielle et la progr
 côté serveur — la vitrine est publiée à part, et elle ne contient aucun secret (un test le
 vérifie sur chaque fichier de `site/`).
 
+### Mettre le projet sur GitHub
+
+**[docs/GITHUB.md](docs/GITHUB.md)** détaille les trois chemins possibles (GitHub Desktop,
+ligne de commande, ou je pousse pour vous), la création des jetons d'accès, puis le
+branchement de Netlify et de Render sur le dépôt. Retenez une chose : `.env` ne se téléverse
+jamais — le dépôt ne contient que `.env.example`, un modèle vide.
+
 ### Un seul compte
 
 L'installation est **mono-utilisateur** : un compte administrateur, aucune inscription,
