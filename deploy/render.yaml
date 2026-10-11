@@ -11,7 +11,7 @@ services:
   - type: web
     name: arch-arena
     runtime: docker
-    plan: starter            # gratuit = endormi après 15 min et disque non attachable
+    plan: free            # gratuit = endormi après 15 min et disque non attachable
     dockerfilePath: ./Dockerfile
     healthCheckPath: /accounts/login/
     envVars:
@@ -42,6 +42,6 @@ services:
 
 databases:
   - name: arch-arena-db
-    plan: basic-256mb        # payant volontairement : la Postgres gratuite de Render est
+    plan: free        # payant volontairement : la Postgres gratuite de Render est
                              # supprimée 30 jours après sa création (aucune sauvegarde).
     postgresMajorVersion: "16"
