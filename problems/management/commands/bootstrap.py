@@ -17,6 +17,10 @@ rien. C'est ce que la production exécute à chaque démarrage.
     python manage.py bootstrap                     # installation neuve
     python manage.py bootstrap --force             # réimporte le catalogue
     python manage.py bootstrap --skip-corpus       # compte uniquement
+
+Un dépôt fraîchement cloné n'a pas de base : la commande applique donc les migrations
+elle-même avant tout le reste, ce qui la rend utilisable telle quelle, sans rien connaître
+de Django.
 """
 
 from __future__ import annotations
@@ -52,6 +56,9 @@ class Command(BaseCommand):
         parser.add_argument(
             "--no-translation", action="store_true", help="ne pas appliquer le français"
         )
+        parser.add_argument(
+            "--skip-migrate", action="store_true", help="ne pas appliquer les migrations"
+        )
 
     # ------------------------------------------------------------------ étapes
 
@@ -79,6 +86,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options) -> None:
         self.stdout.write("Amorçage de la plateforme")
+
+        if not options["skip_migrate"]:
+            self.stdout.write("  → schéma de la base (migrations)")
+            call_command("migrate", interactive=False, verbosity=0)
 
         self._ensure_account(options["username"], options["password"])
 
