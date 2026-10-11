@@ -1,0 +1,108 @@
+{% extends "problems/base.html" %}
+{% block title %}Tableau de bord · ARCH Arena{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Progression</p>
+    <h1>Tableau de bord</h1>
+    <p class="muted">
+      Votre avancement fiche par fiche : indices ouverts, verdicts de l'IA et solutions officielles débloquées.
+    </p>
+  </div>
+  <div class="user-area">
+    <div class="grader-status {% if grader_ok %}ok{% else %}bad{% endif %}">
+      <strong>Correcteur IA</strong>
+      <span class="mono small">{{ grader_label }}</span>
+      <span class="small">{{ grader_message }}</span>
+    </div>
+  </div>
+</section>
+
+<div class="stat-cards">
+  <dl class="stat-card">
+    <dt>Solutions débloquées</dt>
+    <dd>{{ total_solved }}<span class="sub">sur {{ total_problems }} fiches</span></dd>
+  </dl>
+  <dl class="stat-card">
+    <dt>Indices ouverts</dt>
+    <dd>{{ hints_opened }}<span class="sub">paliers consultés</span></dd>
+  </dl>
+  <dl class="stat-card">
+    <dt>Copies acceptées</dt>
+    <dd>{{ status_mix.PASSED|default:0 }}<span class="sub">verdicts positifs de l'IA</span></dd>
+  </dl>
+  <dl class="stat-card">
+    <dt>Copies refusées</dt>
+    <dd>{{ status_mix.REJECTED|default:0 }}<span class="sub">et {{ status_mix.PENDING|default:0 }} en attente</span></dd>
+  </dl>
+</div>
+
+<section class="panel" aria-labelledby="categories-title">
+  <h2 class="panel-title" id="categories-title">Progression par catégorie</h2>
+  <ul class="progress-list">
+    {% for row in per_category %}
+      <li>
+        <div class="progress-head">
+          <span class="badge cat-{{ row.value }}">{{ row.label }}</span>
+          <span class="muted small">{{ row.solved }} / {{ row.total }} débloquée{{ row.solved|pluralize }}</span>
+        </div>
+        <div class="progress-bar" role="progressbar" aria-valuenow="{{ row.pct }}" aria-valuemin="0" aria-valuemax="100"
+             aria-label="{{ row.label }} : {{ row.solved }} sur {{ row.total }} débloquée(s)" style="--pct: {{ row.pct }}%">
+          <span></span>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<div class="two-col">
+  <section class="panel" aria-labelledby="recent-title">
+    <h2 class="panel-title" id="recent-title">Soumissions récentes</h2>
+    {% if recent_submissions %}
+      <ul class="submission-list compact">
+        {% for submission in recent_submissions %}
+          <li class="submission status-{{ submission.status|lower }}">
+            <div class="submission-head">
+              <a href="{% url 'problem-detail' submission.problem.pk %}">{{ submission.problem.puid }}</a>
+              <span class="badge status-{{ submission.status|lower }}">{{ submission.get_status_display }}</span>
+              <span class="muted small">
+                {{ submission.created_at|date:"d/m H:i" }}
+                {% if submission.engine %}· <span class="mono">{{ submission.engine }}</span>{% endif %}
+              </span>
+            </div>
+            <p class="muted small">{{ submission.ai_feedback|truncatechars:180 }}</p>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">
+        Aucune soumission pour l'instant. Ouvrez une fiche, rédigez un plan de solution, puis
+        soumettez-le au correcteur IA : c'est ce verdict qui débloque la solution officielle.
+      </p>
+      <p><a class="btn primary small" href="{% url 'problem-list' %}">Choisir un exercice</a></p>
+    {% endif %}
+  </section>
+
+  <section class="panel" aria-labelledby="unlocks-title">
+    <h2 class="panel-title" id="unlocks-title">Débloquées récemment</h2>
+    {% if recent_unlocks %}
+      <ul class="unlock-list">
+        {% for progress in recent_unlocks %}
+          <li>
+            <a href="{% url 'problem-detail' progress.problem.pk %}">{{ progress.problem.puid }}</a>
+            <span class="muted small">
+              {{ progress.problem.category_label }} · {{ progress.unlocked_at|date:"d/m/Y H:i" }}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">
+        Rien de débloqué pour l'instant — la première preuve validée par l'IA ouvre la première
+        solution officielle.
+      </p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+# Configuration Netlify — vitrine statique du projet ARCH Arena.
+#
+# `site/` est le dossier publié : il est fabriqué par `python3 scripts/build_site.py`
+# (les aperçus de design/ y sont recopiés et leurs liens réécrits). Ne l'éditez pas à la
+# main : relancez le script.
+#
+# L'application Django elle-même (verrou côté serveur, correcteur IA, base de données)
+# ne peut pas tourner sur Netlify : voir docs/PUBLIER.md pour les hébergeurs adaptés.
+
+[build]
+  publish = "site"
+  command = "python3 scripts/build_site.py"
+
+[build.environment]
+  PYTHON_VERSION = "3.13"
+
+# 404 : on renvoie la présentation plutôt qu'une page d'erreur brute
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), camera=(), microphone=()"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

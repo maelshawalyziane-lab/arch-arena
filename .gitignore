@@ -1,0 +1,59 @@
+# ============================================================================
+#  Ce qui ne va PAS dans le dépôt
+# ============================================================================
+#  Règle unique : aucune valeur secrète, aucun artefact régénérable lourd. Le
+#  dépôt doit pouvoir être cloné, déployé et faire tourner la plateforme tel quel.
+#
+#  Attention : un commentaire doit occuper sa PROPRE ligne. Écrit après un motif
+#  sur la même ligne, il devient une partie du motif, et la règle ne s'applique
+#  plus (c'est ainsi qu'un `.env` peut partir sur GitHub sans qu'on le voie).
+# ============================================================================
+
+# --- secrets ----------------------------------------------------------------
+.env
+.env.local
+*.pem
+
+# --- environnement & outils -------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+
+# --- base de données locale -------------------------------------------------
+# Regénérable en ~20 s : `python manage.py bootstrap` (compte + catalogue + français).
+db.sqlite3
+*.sqlite3
+
+# --- artefacts de build -----------------------------------------------------
+# `collectstatic` : reconstruit au démarrage par WhiteNoise.
+staticfiles/
+tmp/
+
+# --- journalisation et rapports d'exécution ---------------------------------
+var/*.log
+var/*.json
+var/*.jsonl
+var/_warn.txt
+
+# ... sauf le cache de traduction, qui est une *source* : sans lui, un déploiement
+# neuf n'aurait pas les énoncés français (`bootstrap` l'applique hors ligne).
+!var/translations.jsonl
+
+# --- base de données locale (rappel) ----------------------------------------
+*.sqlite3-journal
+*.sqlite3-wal
+
+# ============================================================================
+#  Ce qui EST versionné volontairement
+# ============================================================================
+#  design/apercu-*.html  les aperçus autonomes — `scripts/build_site.py` les recopie
+#                        pour fabriquer site/ (Netlify relance ce script au build)
+#  site/                 la vitrine publiée : c'est elle que Netlify sert
+#  fixtures/             le corpus source (all.json, omni_math.jsonl) : l'import et
+#                        l'amorçage d'un hébergeur neuf en dépendent
+#  sql/                  le schéma SQL lisible, en complément des migrations

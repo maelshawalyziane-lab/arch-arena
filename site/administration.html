@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration · ARCH Arena</title>
+  <style>
+    :root { --bg:#090d16; --panel:#131a29; --text:#e8ecf6; --muted:#96a0b8; --accent:#6b8cff; --line:#233049; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px;
+           background:radial-gradient(1100px 600px at 50% -10%, rgba(107,140,255,.16), transparent), var(--bg);
+           color:var(--text); font:400 16px/1.65 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    .card { width:min(680px,100%); background:var(--panel); border:1px solid var(--line);
+            border-radius:18px; padding:34px 32px; box-shadow:0 24px 60px rgba(0,0,0,.45); }
+    h1 { margin:0 0 12px; font:600 26px/1.25 Georgia,serif; }
+    p, li { color:var(--muted); }
+    ul { padding-left:18px; }
+    a.btn { display:inline-block; margin-top:14px; padding:11px 18px; border-radius:10px;
+            background:var(--accent); color:#08101f; font-weight:600; text-decoration:none; }
+    code { background:#0c1322; border:1px solid var(--line); border-radius:6px; padding:1px 6px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>L'administration vit avec le serveur</h1>
+    <p>Cette vitrine est statique : l'interface d'administration de Django
+       (<code>/admin/</code>) n'existe que sur l'application hébergée, où elle sert à corriger
+       une fiche, ajouter un énoncé ou consulter les soumissions.</p>
+    <ul>
+      <li>les fiches, indices et solutions officielles sont en base de données, pas dans un fichier ;</li>
+      <li>l'accès est réservé au compte unique de l'installation ;</li>
+      <li>les mêmes données se pilotent aussi par commande : <code>ingest_omni_math</code>,
+          <code>translate_corpus --apply</code>, <code>verify_lock_sample</code>.</li>
+    </ul>
+    <a class="btn" href="index.html">Retour à la présentation</a>
+  </div>
+</body>
+</html>

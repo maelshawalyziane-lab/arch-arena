@@ -1,0 +1,119 @@
+{% load static %}<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ARCH Arena · entraînement olympique{% endblock %}</title>
+  <meta name="description" content="Plateforme d'auto-formation en mathématiques olympiques : indices progressifs, verrou IA et solution officielle débloquée seulement quand vous l'avez méritée.">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#090d16">
+
+  {# Thème choisi par l'utilisateur, appliqué avant le premier rendu (pas de flash). #}
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("arch-theme");
+        var prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+        document.documentElement.dataset.theme = saved || (prefersLight ? "light" : "dark");
+      } catch (e) { /* stockage indisponible : thème sombre par défaut */ }
+    })();
+  </script>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236b8cff'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='Georgia,serif'%3E%E2%88%91%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{% static 'problems/css/app.css' %}">
+
+  {# KaTeX est servi depuis static/vendor/katex : les maths s'affichent hors ligne,   #}
+  {# y compris dans un aperçu sans réseau. Pour utiliser le CDN, remplacez par :       #}
+  {#   https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css                  #}
+  {#   https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js                   #}
+  {#   https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js     #}
+  <link rel="stylesheet" href="{% static 'vendor/katex/katex.min.css' %}">
+  {# Les polices mathématiques arrivent avant le premier rendu des formules : sinon    #}
+  {# KaTeX compose avec la police de secours et les symboles sont décalés.            #}
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="{% static 'vendor/katex/fonts/KaTeX_Main-Regular.woff2' %}">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="{% static 'vendor/katex/fonts/KaTeX_Math-Italic.woff2' %}">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="{% static 'vendor/katex/fonts/KaTeX_Size1-Regular.woff2' %}">
+  <script defer src="{% static 'vendor/katex/katex.min.js' %}"></script>
+  <script defer src="{% static 'vendor/katex/auto-render.min.js' %}"></script>
+  <script defer src="{% static 'problems/js/app.js' %}"></script>
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="theme-{% block body_class %}default{% endblock %}">
+  <a class="skip-link" href="#main">Aller au contenu principal</a>
+
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="{% url 'problem-list' %}">
+        <span class="brand-mark" aria-hidden="true">∑</span>
+        <span>
+          <strong>ARCH Arena</strong>
+          <small>Entraînement olympique · solutions débloquées par l'IA</small>
+        </span>
+      </a>
+
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="{% url 'problem-list' %}" {% if request.resolver_match.url_name == 'problem-list' %}class="active" aria-current="page"{% endif %}>Exercices</a>
+        <a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}class="active" aria-current="page"{% endif %}>Tableau de bord</a>
+        {% if user.is_staff %}<a href="/admin/">Admin</a>{% endif %}
+      </nav>
+
+      <div class="user-area">
+        {% if PLATFORM.demo_mode %}
+          <span class="badge ghost" title="DEMO_MODE=1 : les visiteurs anonymes partagent le compte invité">démo</span>
+        {% endif %}
+
+        <button type="button" class="theme-toggle" id="theme-toggle"
+                aria-label="Changer de thème clair / sombre" title="Thème clair / sombre">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.2"/>
+            <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/>
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+            <path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/>
+          </svg>
+        </button>
+
+        {% if user.is_authenticated %}
+          <span class="user-chip">
+            <span class="avatar" aria-hidden="true">{{ user.get_username|slice:":1" }}</span>
+            <span class="user-name">{{ user.get_username }}</span>
+          </span>
+        {% else %}
+          <a class="btn small" href="{% url 'login' %}">Connexion</a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  {% if messages %}
+    <div class="container messages">
+      {% for message in messages %}
+        <p class="notice {{ message.tags }}" role="status">{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main id="main" class="container">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <p class="muted small">
+        Inspiré d'<strong>ARCH</strong> (Automated Repository of Canned Hints) d'Evan&nbsp;Chen
+        (<span class="mono">otis-web</span>). Les indices s'ouvrent un par un ; la solution officielle
+        reste verrouillée jusqu'à ce que le correcteur IA accepte votre rédaction.
+      </p>
+      <p class="muted small">
+        Correcteur : <span class="mono">{{ PLATFORM.ai_mode }}</span> ·
+        fournisseur <span class="mono">{{ PLATFORM.ai_provider }}</span>
+      </p>
+    </div>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

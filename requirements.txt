@@ -1,0 +1,15 @@
+# Core
+Django>=4.2,<6.2          # developed and tested against Django 6.1
+# Database driver for PostgreSQL (production). SQLite needs nothing extra.
+psycopg[binary]>=3.1,<4   # pip install "psycopg[binary]" ; pins Django's "postgresql" backend
+# Optional: nicer .env loading (the project also works with plain environment variables)
+# python-dotenv>=1.0
+
+# NOTE: no HTTP client is required — services/ai_grader.py uses the standard library
+# (urllib.request) so the AI verification pipeline has zero third-party runtime deps.
+
+# ---------------------------------------------------------------------------
+# Production (non requis pour le développement)
+# ---------------------------------------------------------------------------
+gunicorn>=23.0,<24         # WSGI : le serveur d'application des plateformes d'hébergement
+whitenoise>=6.7,<7         # sert CSS/JS/KaTeX depuis Gunicorn, sans nginx ni CDN

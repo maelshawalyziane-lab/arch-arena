@@ -1,0 +1,316 @@
+{% extends "problems/base.html" %}
+{% load static %}
+{% block title %}{{ problem.puid }} · ARCH Arena{% endblock %}
+
+{% block content %}
+<article
+  class="problem-detail"
+  id="problem-root"
+  data-problem-id="{{ problem.pk }}"
+  data-puid="{{ problem.puid }}"
+  data-solved="{% if solved %}1{% else %}0{% endif %}"
+  data-solved-label="{{ problem.puid }}"
+  data-verify-url="{% url 'api-verify' problem.pk %}"
+  data-status-url="{% url 'api-status' problem.pk %}"
+  data-reset-url="{% url 'api-reset' problem.pk %}"
+  data-revealed-count="{{ revealed_count }}"
+  data-hint-count="{{ hint_rows|length }}">
+
+  {# ------------------------------------------------------------------ entête #}
+  <header class="problem-head">
+    <div class="problem-head-main">
+      <p class="eyebrow">
+        {{ problem.category_label }} · {{ problem.get_difficulty_track_display }}
+      </p>
+      <h1>{{ problem.puid }}</h1>
+      <p class="muted small">
+        {% if problem.source_url %}<a href="{{ problem.source_url }}" rel="noopener noreferrer">énoncé d'origine</a> ·{% endif %}
+        {{ hint_rows|length }} indice{{ hint_rows|length|pluralize }} ·
+        {{ attempt_count }} soumission{{ attempt_count|pluralize }} enregistrée{{ attempt_count|pluralize }}
+      </p>
+    </div>
+    <div class="problem-head-side">
+      <span class="badge cat-{{ problem.category }}">{{ problem.category_label }}</span>
+      <span class="badge track-{{ problem.difficulty_track }}">{{ problem.get_difficulty_track_display }}</span>
+      <span class="badge {% if solved %}solved{% else %}locked{% endif %}" id="solve-badge">
+        {% if solved %}✓ Solution débloquée{% else %}🔒 Solution verrouillée{% endif %}
+      </span>
+    </div>
+  </header>
+
+  <div class="detail-layout">
+    {# ============================================================ colonne principale #}
+    <div class="detail-main">
+
+      {# ------------------------------------------------------------- énoncé #}
+      <section class="panel" id="statement" aria-labelledby="statement-title">
+        <h2 class="panel-title" id="statement-title">Énoncé</h2>
+        {% if problem.statement_tex %}
+          <div class="rendered statement-body">{{ statement_html|safe }}</div>
+        {% else %}
+          <p class="notice warn small">
+            <strong>Énoncé non renseigné.</strong>
+            Cette fiche provient de la fixture ARCH, dont la copie publique ne contient que les
+            problèmes et les indices — les énoncés vivent dans
+            <span class="mono">arch/data/&lt;PUID&gt;.tex</span> en amont. Ajoutez l'énoncé via
+            l'admin (ou importez une fixture qui le contient) : le verrou IA fonctionnera exactement
+            comme pour les fiches du corpus curaté.
+          </p>
+        {% endif %}
+        {% if problem.answer_tex and solved %}
+          <p class="answer-line">Réponse : <span class="math-inline">{{ problem.answer_tex }}</span></p>
+        {% endif %}
+      </section>
+
+      {# ------------------------------------------------ indices (un par un) #}
+      <section class="panel" id="hints" aria-labelledby="hints-title">
+        <h2 class="panel-title" id="hints-title">
+          Indices
+          <span class="muted small">
+            — révélés un par un
+            (<span id="hint-progress">{{ revealed_count }}/{{ hint_rows|length }}</span> ouvert{{ revealed_count|pluralize }})
+          </span>
+        </h2>
+        <ol class="hint-list">
+          {% for row in hint_rows %}
+            <li class="hint {% if row.revealed %}revealed{% endif %}"
+                data-hint-id="{{ row.hint.pk }}" data-order="{{ row.hint.order_index }}">
+              <div class="hint-head">
+                <span class="hint-index">Indice {{ row.hint.order_index }}</span>
+                {% if row.revealed %}
+                  <span class="pill ok">révélé</span>
+                {% elif row.is_next %}
+                  <button type="button" class="btn ghost small js-reveal-hint"
+                          data-url="{% url 'api-hint-reveal' problem.pk row.hint.pk %}">
+                    Révéler l'indice {{ row.hint.order_index }}
+                  </button>
+                {% else %}
+                  <span class="pill locked">🔒 ouvrez d'abord l'indice {{ row.hint.order_index|add:"-1" }}</span>
+                {% endif %}
+              </div>
+              <div class="hint-body">
+                {% if row.revealed %}
+                  <div class="rendered">{{ row.content_html|safe }}</div>
+                {% else %}
+                  <p class="muted small">
+                    Masqué. Les indices s'ouvrent dans l'ordre : une petite piste est toujours
+                    disponible sans dévoiler le palier suivant.
+                  </p>
+                {% endif %}
+              </div>
+            </li>
+          {% empty %}
+            <li class="muted small">Aucun indice n'est enregistré pour cette fiche.</li>
+          {% endfor %}
+        </ol>
+      </section>
+
+      {# ------------------------------------------------------- soumission #}
+      <section class="panel" id="submission" aria-labelledby="submission-title">
+        <h2 class="panel-title" id="submission-title">Soumettre votre solution</h2>
+
+        {% if solved %}
+          <p class="notice success">
+            <strong>Débloqué.</strong> La solution officielle est visible plus bas. Vous pouvez
+            toujours rédiger d'autres preuves : elles sont archivées dans l'historique sans être
+            réévaluées.
+          </p>
+        {% else %}
+          <p class="muted">
+            Rédigez un plan de solution en Markdown, les mathématiques entre <code>$…$</code>. Le
+            correcteur compare votre raisonnement à la solution officielle, tolère les étapes de
+            calcul omises, et refuse les arguments vagues ou faux. Un verdict positif débloque la
+            solution officielle sur cette page.
+          </p>
+          <p class="muted small">
+            Correcteur : <span class="mono" id="grader-label">{{ grader_label }}</span> ·
+            <span id="rate-note">{{ rate_remaining }}</span> soumission(s) restante(s)
+            sur {{ rate_limit }} dans cette fenêtre
+          </p>
+        {% endif %}
+
+        <form id="submission-form" method="post" action="{% url 'api-verify' problem.pk %}" novalidate>
+          {% csrf_token %}
+          <label class="visually-hidden" for="submission-text">Votre plan de solution</label>
+          <textarea id="submission-text" name="text" rows="12" spellcheck="false"
+                    maxlength="{{ max_submission_chars }}"
+                    placeholder="Décrivez votre stratégie, nommez les lemmes utilisés, puis concluez.&#10;&#10;Les maths entre $…$ sont rendues, par exemple $x^2 + y^2 = z^2$ ou $$\sum_{k=1}^{n} k = \frac{n(n+1)}{2}.$$&#10;&#10;Soyez explicite sur l'étape habituellement passée sous silence : le correcteur refuse les arguments vagues."
+                    aria-describedby="submission-help"></textarea>
+          <input type="hidden" name="redirect" value="1">{# repli progressif sans JavaScript #}
+          <div class="form-row">
+            <span class="muted small" id="submission-help">
+              <span id="char-count">0</span> / {{ max_submission_chars }} caractères · ⌘/Ctrl + Entrée pour soumettre
+            </span>
+            <button class="btn primary" type="submit" id="submit-btn">
+              <span class="spinner" id="submit-spinner" hidden aria-hidden="true"></span>
+              <span id="submit-label">Soumettre à l'évaluation IA</span>
+            </button>
+          </div>
+        </form>
+
+        <div class="verdict" id="verdict" role="status" aria-live="polite" hidden></div>
+      </section>
+
+      {# ------------------------------------------- historique de correction #}
+      {% if submissions %}
+        <section class="panel" id="history" aria-labelledby="history-title">
+          <h2 class="panel-title" id="history-title">
+            Vos corrections
+            <span class="muted small">({{ attempt_count }} tentative{{ attempt_count|pluralize }})</span>
+          </h2>
+          <ul class="submission-list">
+            {% for submission in submissions %}
+              <li class="submission status-{{ submission.status|lower }}">
+                <div class="submission-head">
+                  <span class="badge status-{{ submission.status|lower }}">{{ submission.get_status_display }}</span>
+                  <span class="muted small">
+                    {{ submission.created_at|date:"d/m/Y H:i" }} · {{ submission.engine|default:"—" }}
+                    {% if submission.latency_ms %}· {{ submission.latency_ms }} ms{% endif %}
+                    {% if submission.is_demo %}· exemple pré-chargé{% endif %}
+                  </span>
+                </div>
+                {% if submission.ai_feedback %}
+                  <div class="feedback"><strong>Correcteur :</strong> {{ submission.ai_feedback|linebreaksbr }}</div>
+                {% endif %}
+                <details class="submission-text">
+                  <summary>Votre copie soumise</summary>
+                  <pre>{{ submission.submitted_text }}</pre>
+                </details>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+
+      {# --------------------------------------------------- solution officielle #}
+      {# SÉCURITÉ : le texte officiel n'est mis dans le contexte QUE si solved == true. #}
+      {# Sinon il n'y a rien à « cacher » côté client : la donnée n'est jamais envoyée.  #}
+      <section class="panel solution-panel" id="solution-panel" aria-labelledby="solution-title">
+        <h2 class="panel-title" id="solution-title">
+          Solution officielle
+          {% if solved %}
+            <span class="badge solved">débloquée</span>
+          {% else %}
+            <span class="badge locked">verrouillée</span>
+          {% endif %}
+        </h2>
+
+        {% if solved %}
+          {% if solution_missing %}
+            <p class="notice warn">
+              Le verrou est ouvert, mais aucune solution officielle n'est encore enregistrée pour
+              cette fiche.
+            </p>
+          {% else %}
+            <div class="rendered solution-body">{{ solution_html|safe }}</div>
+            {% if attribution %}<p class="muted small">Source : {{ attribution }}</p>{% endif %}
+            {% if official_tex %}
+              <details class="tex-source">
+                <summary>Copier la source LaTeX</summary>
+                <pre>{{ official_tex }}</pre>
+              </details>
+            {% endif %}
+          {% endif %}
+
+        {% elif solution_missing %}
+          <p class="notice warn">
+            <strong>Aucune solution officielle enregistrée.</strong>
+            Le verrou reste fermé tant que la référence n'existe pas : les soumissions répondent
+            <span class="mono">422 no_official_solution</span>. Ajoutez la solution via l'admin et
+            l'évaluation IA devient immédiatement opérationnelle.
+          </p>
+
+        {% else %}
+          <div class="locked-solution">
+            {# Décor : paraphrase neutre, ce n'est pas la solution. #}
+            <div class="locked-blur" aria-hidden="true">
+              <p>La démonstration commence par identifier l'invariant ou la quantité auxiliaire
+                 suggérée par l'énoncé, puis exploite une inégalité de monotonie ; le cas d'égalité
+                 est traité séparément.</p>
+              <p>La dernière étape ramène la construction générale au cas de base déjà réglé, ce qui
+                 achève l'argument annoncé pour toutes les configurations admissibles des données.</p>
+            </div>
+            <div class="locked-overlay">
+              <span class="lock-icon" aria-hidden="true">🔒</span>
+              <p class="locked-title">🔒 Solution officielle verrouillée.</p>
+              <p>Soumettez une preuve validée par l'IA pour la débloquer.</p>
+              <p class="muted small">
+                La réponse officielle reste côté serveur : elle n'est jamais envoyée à votre
+                navigateur avant que <span class="mono">UserProgress.is_solved</span> ne passe à
+                <span class="mono">true</span>.
+              </p>
+              <a class="btn primary" href="#submission">Rédiger ma preuve</a>
+            </div>
+          </div>
+        {% endif %}
+      </section>
+    </div>
+
+    {# ================================================================= rail latéral #}
+    <aside class="detail-aside" aria-label="État de la fiche">
+      <div class="rail-card">
+        <p class="rail-title">Verrou IA</p>
+        <ul class="rail-list">
+          <li>
+            <span class="k">État</span>
+            <span class="v">
+              {% if solved %}<span class="badge solved">débloquée</span>{% else %}<span class="badge locked">verrouillée</span>{% endif %}
+            </span>
+          </li>
+          <li>
+            <span class="k">Indices ouverts</span>
+            <span class="v">{{ revealed_count }} / {{ hint_rows|length }}</span>
+          </li>
+          <li>
+            <span class="k">Tentatives</span>
+            <span class="v">{{ attempt_count }}</span>
+          </li>
+          {% if not solved %}
+            <li>
+              <span class="k">Quota</span>
+              <span class="v" data-quota>{{ rate_remaining }} / {{ rate_limit }}</span>
+            </li>
+          {% endif %}
+        </ul>
+        {% if not solved %}
+          <p class="muted small rail-note">Un verdict positif de l'IA débloque la solution officielle instantanément.</p>
+          <a class="btn primary block" href="#submission">Rédiger ma preuve</a>
+        {% endif %}
+      </div>
+
+      <nav class="rail-card" aria-label="Sommaire de la page">
+        <p class="rail-title">Sommaire</p>
+        <div class="rail-nav">
+          <a href="#statement">Énoncé</a>
+          <a href="#hints">Indices</a>
+          <a href="#submission">Soumettre une solution</a>
+          <a href="#solution-panel">Solution officielle</a>
+        </div>
+      </nav>
+    </aside>
+  </div>
+
+  {# --------------------------------------------------------------- bas de page #}
+  <nav class="problem-nav" aria-label="Navigation entre exercices">
+    {% if nav_prev %}
+      <a class="btn ghost" rel="prev" href="{% url 'problem-detail' nav_prev.pk %}">← {{ nav_prev.puid }}</a>
+    {% else %}<span></span>{% endif %}
+
+    {% if allow_reset %}
+      <button type="button" class="btn danger small" id="reset-progress"
+              data-url="{% url 'api-reset' problem.pk %}"
+              title="Outil de démonstration : reverrouiller cette fiche pour votre compte">
+        Réinitialiser ma progression sur cette fiche
+      </button>
+    {% endif %}
+
+    {% if nav_next %}
+      <a class="btn ghost" rel="next" href="{% url 'problem-detail' nav_next.pk %}">{{ nav_next.puid }} →</a>
+    {% else %}<span></span>{% endif %}
+  </nav>
+</article>
+{% endblock %}
+
+{% block scripts %}
+  <script defer src="{% static 'problems/js/problem.js' %}"></script>
+{% endblock %}

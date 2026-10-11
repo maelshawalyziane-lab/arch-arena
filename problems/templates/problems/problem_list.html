@@ -1,0 +1,203 @@
+{% extends "problems/base.html" %}
+{% block title %}Exercices · ARCH Arena{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Répertoire</p>
+    <h1>Exercices</h1>
+    <p class="muted">
+      <strong>{{ total_problems }}</strong> énoncés au catalogue — dont
+      <strong>{{ curated_total }}</strong> fiches curatées à la main et
+      <strong>{{ omni_total }}</strong> problèmes importés (Omni-MATH) —,
+      <strong>{{ total_solved }}</strong> solution{{ total_solved|pluralize }} débloquée{{ total_solved|pluralize }}.
+      Les indices s'ouvrent un par un&nbsp;; la solution officielle reste verrouillée jusqu'à validation par le correcteur IA.
+    </p>
+  </div>
+  <div class="user-area">
+    {% if next_problem and total_solved < total_problems %}
+      <a class="btn primary" href="{% url 'problem-detail' next_problem.pk %}">
+        Continuer · {{ next_problem.puid }}
+      </a>
+    {% endif %}
+    <a class="btn ghost" href="{% url 'problem-random' %}" title="Tirer une fiche non encore débloquée">Problème au hasard</a>
+  </div>
+</section>
+
+{% if not filters_active %}
+  <section class="hero" aria-labelledby="howto-title">
+    <div class="hero-copy">
+      <p class="eyebrow">La règle du jeu</p>
+      <h2 id="howto-title">Pas de solution sans preuve.</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-num" aria-hidden="true">1</span>
+          <div>
+            <strong>Cherchez vraiment.</strong>
+            <p>Chaque fiche affiche son énoncé. Les indices s'ouvrent un par un, jamais tous d'un coup.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num" aria-hidden="true">2</span>
+          <div>
+            <strong>Rédigez votre plan.</strong>
+            <p>Markdown et LaTeX, comme sur une copie : les étapes clés, le cas d'égalité, la conclusion.</p>
+          </div>
+        </li>
+        <li>
+          <span class="step-num" aria-hidden="true">3</span>
+          <div>
+            <strong>Faites corriger.</strong>
+            <p>Le correcteur IA compare votre raisonnement à la solution officielle. Verdict positif → la solution se débloque, ici et pour de bon.</p>
+          </div>
+        </li>
+      </ol>
+      <div class="hero-actions">
+        <a class="btn primary" href="{% url 'problem-random' %}">Problème au hasard</a>
+        <a class="btn ghost" href="?corpus=curated">Voir les {{ curated_total }} fiches curatées</a>
+        <a class="btn ghost" href="{% url 'dashboard' %}">Ma progression</a>
+      </div>
+      <p class="muted small">
+        Raccourcis :
+        <a class="chip" href="?q=OMNI IMO">Concours IMO (toutes séries)</a>
+        <a class="chip" href="?q=OMNI IMO SL/">IMO Shortlist</a>
+        <a class="chip" href="?q=OMNI USAMO/">USAMO</a>
+        <a class="chip" href="?q=OMNI Putnam/">Putnam</a>
+        <a class="chip" href="?q=OMNI HMMT-2/">HMMT</a>
+        <a class="chip" href="?corpus=omni&amp;category=geometry">Géométrie importée</a>
+      </p>
+    </div>
+    <aside class="hero-side" aria-label="État du correcteur">
+      <div class="rail-card">
+        <p class="rail-title">Correcteur IA</p>
+        <p class="muted small">
+          {% if PLATFORM.ai_mode == "offline" %}
+            Correcteur structurel hors ligne : il vérifie la cohérence de votre rédaction avec la
+            solution officielle (longueur, vocabulaire mathématique, recouvrement des étapes).
+            Ajoutez une clé API dans <span class="mono">.env</span> pour des corrections fines.
+          {% else %}
+            Mode <span class="mono">{{ PLATFORM.ai_mode }}</span> via
+            <span class="mono">{{ PLATFORM.ai_provider }}</span> : chaque copie est comparée à la
+            solution officielle par le modèle.
+          {% endif %}
+        </p>
+        <p class="muted small rail-note">
+          Le verrou est appliqué côté serveur : tant que vous n'avez pas de verdict positif,
+          la solution officielle n'est jamais envoyée à votre navigateur.
+        </p>
+      </div>
+    </aside>
+  </section>
+{% endif %}
+
+<section class="panel" aria-labelledby="filters-title">
+  <h2 class="visually-hidden" id="filters-title">Filtrer les exercices</h2>
+  <form class="filters" method="get" role="search">
+    <div class="filter-field grow">
+      <label for="q">Rechercher un PUID, un énoncé ou un indice</label>
+      <input type="search" id="q" name="q" value="{{ current.q }}"
+             placeholder="ex. IMO 2014/5, invariant, OMNI USAMO" autocomplete="off">
+    </div>
+    <div class="filter-field">
+      <label for="category">Catégorie</label>
+      <select id="category" name="category">
+        <option value="">Toutes</option>
+        {% for value, label in categories %}
+          <option value="{{ value }}" {% if current.category == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="track">Difficulté</label>
+      <select id="track" name="track">
+        <option value="">Toutes</option>
+        {% for value, label in tracks %}
+          <option value="{{ value }}" {% if current.track == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="corpus">Corpus</label>
+      <select id="corpus" name="corpus">
+        <option value="">Tout le catalogue</option>
+        <option value="curated" {% if current.corpus == "curated" %}selected{% endif %}>Curaté ({{ curated_total }})</option>
+        <option value="omni" {% if current.corpus == "omni" %}selected{% endif %}>Importé ({{ omni_total }})</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="status">État</label>
+      <select id="status" name="status">
+        <option value="">Tous</option>
+        <option value="unsolved" {% if current.status == "unsolved" %}selected{% endif %}>Solution verrouillée</option>
+        <option value="solved" {% if current.status == "solved" %}selected{% endif %}>Solution débloquée</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="order">Tri</label>
+      <select id="order" name="order">
+        <option value="curriculum" {% if current.order == "curriculum" %}selected{% endif %}>Progression conseillée</option>
+        <option value="puid" {% if current.order == "puid" %}selected{% endif %}>PUID croissant</option>
+        <option value="-puid" {% if current.order == "-puid" %}selected{% endif %}>PUID décroissant</option>
+      </select>
+    </div>
+    <div class="filter-actions">
+      <button class="btn primary" type="submit">Filtrer</button>
+      <a class="btn ghost" href="{% url 'problem-list' %}" title="Vider tous les filtres">Réinitialiser</a>
+    </div>
+  </form>
+</section>
+
+{% if problems %}
+  <section aria-labelledby="results-title">
+    <h2 class="visually-hidden" id="results-title">Résultats</h2>
+    <p class="muted small results-count">
+      {{ paginator.count }} fiche{{ paginator.count|pluralize }} correspond{{ paginator.count|pluralize:"ent" }}
+      au filtre · page {{ page_obj.number }} sur {{ paginator.num_pages }}
+    </p>
+    <div class="problem-grid">
+      {% for problem in problems %}
+        <a class="problem-card cat-{{ problem.category }} {% if problem.pk in solved_ids %}is-solved{% endif %}"
+           href="{% url 'problem-detail' problem.pk %}">
+          <div class="card-top">
+            <span class="puid">{{ problem.puid }}</span>
+            <span class="badge cat-{{ problem.category }}">{{ problem.category_label }}</span>
+          </div>
+          <p class="card-excerpt">{{ problem.excerpt }}</p>
+          <div class="card-foot">
+            <span class="badge track-{{ problem.difficulty_track }}">{{ problem.get_difficulty_track_display }}</span>
+            <span class="muted small">{{ problem.hints_total }} indice{{ problem.hints_total|pluralize }}</span>
+            {% if problem.pk in solved_ids %}
+              <span class="badge solved">✓ débloquée</span>
+            {% else %}
+              <span class="badge locked">🔒 verrouillée</span>
+            {% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+{% else %}
+  <section class="panel">
+    <h2 class="panel-title">Aucun résultat</h2>
+    <p class="muted">Aucune fiche ne correspond à ce filtre. Essayez un autre mot-clé ou réinitialisez la recherche.</p>
+    <p class="muted small">
+      Pour alimenter le catalogue :
+      <span class="mono">python manage.py ingest_omni_math</span> (corpus importé) ou
+      <span class="mono">python manage.py ingest_arch_fixture fixtures/all.json</span> (format ARCH).
+    </p>
+    <p><a class="btn ghost small" href="{% url 'problem-list' %}">Vider les filtres</a></p>
+  </section>
+{% endif %}
+
+{% if is_paginated %}
+  <nav class="pagination" aria-label="Pagination">
+    {% if page_obj.has_previous %}
+      <a class="btn ghost" rel="prev" href="?page={{ page_obj.previous_page_number }}{% if current.q %}&amp;q={{ current.q|urlencode }}{% endif %}{% if current.category %}&amp;category={{ current.category }}{% endif %}{% if current.track %}&amp;track={{ current.track }}{% endif %}{% if current.corpus %}&amp;corpus={{ current.corpus }}{% endif %}{% if current.status %}&amp;status={{ current.status }}{% endif %}{% if current.order %}&amp;order={{ current.order }}{% endif %}">← Précédent</a>
+    {% else %}<span></span>{% endif %}
+    <span class="muted small">page {{ page_obj.number }} sur {{ paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a class="btn ghost" rel="next" href="?page={{ page_obj.next_page_number }}{% if current.q %}&amp;q={{ current.q|urlencode }}{% endif %}{% if current.category %}&amp;category={{ current.category }}{% endif %}{% if current.track %}&amp;track={{ current.track }}{% endif %}{% if current.corpus %}&amp;corpus={{ current.corpus }}{% endif %}{% if current.status %}&amp;status={{ current.status }}{% endif %}{% if current.order %}&amp;order={{ current.order }}{% endif %}">Suivant →</a>
+    {% else %}<span></span>{% endif %}
+  </nav>
+{% endif %}
+{% endblock %}

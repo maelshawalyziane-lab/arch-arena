@@ -1,0 +1,39 @@
+# Intégration continue : à chaque envoi, la suite de tests et les contrôles de qualité
+# maison doivent passer. Le corpus et le cache de traduction sont dans le dépôt, donc
+# tout tourne hors ligne — aucun secret n'est nécessaire.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Dépendances
+        run: pip install -r requirements.txt
+
+      - name: Suite de tests (verrou, API, rendu LaTeX, vitrine)
+        run: python manage.py test problems
+
+      - name: Contrôles système
+        run: python manage.py check
+
+      - name: Installation neuve (compte unique)
+        run: python manage.py bootstrap --password "ci-only-not-a-secret" --skip-corpus
+
+      - name: La vitrine publiée ne fuit aucun secret
+        run: python scripts/build_site.py
+
+      - name: Aucune formule ne casse KaTeX (échantillon de 300 fiches)
+        run: python manage.py check_rendering --sample 300 --show 5

@@ -1,0 +1,17 @@
+# Rien de ce qui suit n'a sa place dans une image de production.
+.git
+.gitignore
+.env
+db.sqlite3
+# le cache de traduction part dans l'image : l'amorçage écrit le français sans réseau
+var/*
+!var/translations.jsonl
+staticfiles/
+site/
+design/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+node_modules/
+docs/

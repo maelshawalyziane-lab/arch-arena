@@ -1,0 +1,23 @@
+{% extends "problems/base.html" %}
+{% block title %}Créer un compte · ARCH Arena{% endblock %}
+
+{% block content %}
+<section class="panel narrow">
+  <h1>Créer un compte</h1>
+  <p class="muted small">Vos solutions débloquées, vos indices consultés et votre historique de correction restent privés.</p>
+  <form method="post" action="{% url 'signup' %}">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<p class="notice warn">{{ form.non_field_errors }}</p>{% endif %}
+    {% for field in form %}
+      <div class="filter-field">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<span class="muted small">{{ field.help_text|safe }}</span>{% endif %}
+        {% for error in field.errors %}<span class="field-error">{{ error }}</span>{% endfor %}
+      </div>
+    {% endfor %}
+    <button class="btn primary" type="submit">Créer mon compte</button>
+    <a class="btn ghost block" href="{% url 'login' %}">J'ai déjà un compte</a>
+  </form>
+</section>
+{% endblock %}

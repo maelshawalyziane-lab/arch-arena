@@ -1,0 +1,15 @@
+{% extends "problems/base.html" %}
+{% block title %}Comptes fermés · ARCH Arena{% endblock %}
+
+{% block content %}
+<section class="panel narrow" aria-labelledby="closed-title">
+  <p class="eyebrow">Accès</p>
+  <h1 id="closed-title">Les comptes sont fermés</h1>
+  <p class="muted">
+    Cette installation fonctionne avec <strong>un seul compte</strong> : la progression, les indices
+    ouverts et l'historique de correction appartiennent à ce compte-là. Aucune inscription
+    n'est possible.
+  </p>
+  <p><a class="btn primary" href="{% url 'login' %}">Se connecter</a></p>
+</section>
+{% endblock %}

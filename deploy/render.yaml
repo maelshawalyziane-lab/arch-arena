@@ -1,0 +1,47 @@
+# Render — hébergement de la vraie plateforme Django.
+#
+#   1. poussez le dépôt sur GitHub ;
+#   2. sur render.com : New → Blueprint, choisissez le dépôt : ce fichier décrit le service ;
+#   3. renseignez les variables marquées `sync: false` dans le tableau de bord.
+#
+# Netlify ne peut pas exécuter cette application (pas de serveur, donc pas de verrou) ;
+# ce fichier est la contrepartie « vraie application » de la vitrine statique.
+
+services:
+  - type: web
+    name: arch-arena
+    runtime: docker
+    plan: starter            # gratuit = endormi après 15 min et disque non attachable
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /accounts/login/
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings_production
+      - key: DJANGO_SECRET_KEY
+        generateValue: true  # Render génère une valeur longue et aléatoire
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false          # votre-domaine.onrender.com
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        sync: false          # https://votre-domaine.onrender.com
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_MODE
+        value: auto
+      - key: AI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GEMINI_API_KEY
+        sync: false          # à coller dans le tableau de bord (jamais dans le dépôt)
+      - key: ARCH_ADMIN_PASSWORD
+        sync: false          # mot de passe du compte unique `admin`, créé au premier démarrage
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: arch-arena-db
+          property: connectionString
+
+databases:
+  - name: arch-arena-db
+    plan: basic-256mb        # payant volontairement : la Postgres gratuite de Render est
+                             # supprimée 30 jours après sa création (aucune sauvegarde).
+    postgresMajorVersion: "16"
