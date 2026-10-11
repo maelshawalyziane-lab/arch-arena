@@ -58,7 +58,8 @@ vérifie sur chaque fichier de `site/`).
 
 L'installation est **mono-utilisateur** : un compte administrateur, aucune inscription,
 aucun compte invité. Les pages d'étude redirigent vers la connexion, `/signup/` explique la
-règle (403), et `DEMO_MODE=0` désactive le mode démonstration.
+règle (403) ; c'est le réglage par défaut, et `DEMO_MODE=1` ouvre au contraire un compte
+invité partagé pour montrer l'interface.
 
 ```bash
 export ARCH_ADMIN_PASSWORD='…'            # jamais dans le dépôt : .env ou l'environnement

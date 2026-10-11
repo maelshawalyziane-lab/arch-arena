@@ -227,7 +227,11 @@ MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 # --------------------------------------------------------------------------- #
 # product / platform settings (consumed by problems.services.*)
 # --------------------------------------------------------------------------- #
-DEMO_MODE = env_bool("DEMO_MODE", DEBUG)
+#: La plateforme est **mono-compte** : le mode démonstration (un compte invité partagé
+#: entre visiteurs anonymes) doit être demandé explicitement. Le laisser dépendre de
+#: DEBUG faisait diverger un dépôt fraîchement cloné de l'installation réelle — les
+#: visiteurs anonymes y entraient sans mot de passe.
+DEMO_MODE = env_bool("DEMO_MODE", False)
 ALLOW_PROGRESS_RESET = env_bool("ALLOW_PROGRESS_RESET", DEBUG)
 #: Par défaut la plateforme est mono-compte : l'inscription est fermée.
 ALLOW_SIGNUP = env_bool("ALLOW_SIGNUP", False)
