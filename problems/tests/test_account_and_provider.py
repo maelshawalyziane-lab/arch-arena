@@ -202,3 +202,35 @@ class GraderResilienceTests(TestCase):
                 self.assertTrue(verdict.engine.startswith("repli:"))
         self.assertEqual(caller.call_count, 1, "le disjoncteur doit couper après le premier échec")
         self.assertNotEqual(ai_grader.breaker_state(), "fermé")
+
+
+class HealthCheckTests(TestCase):
+    """La sonde de santé des hébergeurs.
+
+    Elle est interrogée pendant le déploiement, en HTTP simple, sans session : elle
+    doit répondre 200 dans tous les cas. Une redirection vers HTTPS y serait comptée
+    comme un échec de déploiement (c'est arrivé sur Render).
+    """
+
+    def test_answers_without_being_logged_in(self):
+        response = self.client.get("/healthz/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "ok")
+
+    @override_settings(
+        SECURE_SSL_REDIRECT=True,
+        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+        SECURE_REDIRECT_EXEMPT=[r"^healthz/$"],
+    )
+    def test_is_exempt_from_the_https_redirect(self):
+        response = self.client.get("/healthz/", secure=False)
+        self.assertEqual(response.status_code, 200)
+
+    @override_settings(
+        SECURE_SSL_REDIRECT=True,
+        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+        SECURE_REDIRECT_EXEMPT=[r"^healthz/$"],
+    )
+    def test_the_other_pages_still_force_https(self):
+        response = self.client.get("/accounts/login/", secure=False)
+        self.assertEqual(response.status_code, 301)

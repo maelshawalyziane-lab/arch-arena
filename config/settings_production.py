@@ -62,6 +62,9 @@ if not env("DATABASE_URL") and not env("POSTGRES_DB"):
 # transport + cookie security
 # --------------------------------------------------------------------------- #
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
+#: La sonde de santé est interrogée en HTTP par l'hébergeur : la rediriger vers HTTPS
+#: ferait échouer le déploiement (Render attend un 200 et reçoit un 301).
+SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_HSTS_SECONDS = int(env("DJANGO_HSTS_SECONDS", "31536000") or 0)  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True

@@ -1,0 +1,116 @@
+diff --git a/Dockerfile b/Dockerfile
+index 638cdf7..9912d81 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -34,7 +34,8 @@ RUN useradd --create-home --uid 10001 app \
+ USER app
+ 
+ EXPOSE 8000
+-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+-  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/accounts/login/', timeout=4).status == 200 else 1)"
++#: `PORT` est fourni par l'hébergeur (Render : 10000) ; /healthz/ répond toujours 200.
++HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
++  CMD python -c "import os,urllib.request,sys; port=os.environ.get('PORT','8000'); sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:'+port+'/healthz/', timeout=4).status == 200 else 1)"
+ 
+ CMD ["bash", "deploy/start.sh"]
+diff --git a/config/settings_production.py b/config/settings_production.py
+index 633a3fd..136ebce 100644
+--- a/config/settings_production.py
++++ b/config/settings_production.py
+@@ -62,6 +62,9 @@ if not env("DATABASE_URL") and not env("POSTGRES_DB"):
+ # transport + cookie security
+ # --------------------------------------------------------------------------- #
+ SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
++#: La sonde de santé est interrogée en HTTP par l'hébergeur : la rediriger vers HTTPS
++#: ferait échouer le déploiement (Render attend un 200 et reçoit un 301).
++SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
+ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+ SECURE_HSTS_SECONDS = int(env("DJANGO_HSTS_SECONDS", "31536000") or 0)  # 1 year
+ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+diff --git a/config/urls.py b/config/urls.py
+index 0367313..658e3a7 100644
+--- a/config/urls.py
++++ b/config/urls.py
+@@ -3,7 +3,11 @@
+ from django.contrib import admin
+ from django.urls import include, path
+ 
++from problems.views import healthz
++
+ urlpatterns = [
++    # sonde de santé des hébergeurs : jamais redirigée, jamais authentifiée
++    path("healthz/", healthz, name="healthz"),
+     path("admin/", admin.site.urls),
+     path("accounts/", include("django.contrib.auth.urls")),
+     path("", include("problems.urls")),
+diff --git a/problems/tests/test_account_and_provider.py b/problems/tests/test_account_and_provider.py
+index 317f608..adec862 100644
+--- a/problems/tests/test_account_and_provider.py
++++ b/problems/tests/test_account_and_provider.py
+@@ -202,3 +202,35 @@ class GraderResilienceTests(TestCase):
+                 self.assertTrue(verdict.engine.startswith("repli:"))
+         self.assertEqual(caller.call_count, 1, "le disjoncteur doit couper après le premier échec")
+         self.assertNotEqual(ai_grader.breaker_state(), "fermé")
++
++
++class HealthCheckTests(TestCase):
++    """La sonde de santé des hébergeurs.
++
++    Elle est interrogée pendant le déploiement, en HTTP simple, sans session : elle
++    doit répondre 200 dans tous les cas. Une redirection vers HTTPS y serait comptée
++    comme un échec de déploiement (c'est arrivé sur Render).
++    """
++
++    def test_answers_without_being_logged_in(self):
++        response = self.client.get("/healthz/")
++        self.assertEqual(response.status_code, 200)
++        self.assertEqual(response.json()["status"], "ok")
++
++    @override_settings(
++        SECURE_SSL_REDIRECT=True,
++        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
++        SECURE_REDIRECT_EXEMPT=[r"^healthz/$"],
++    )
++    def test_is_exempt_from_the_https_redirect(self):
++        response = self.client.get("/healthz/", secure=False)
++        self.assertEqual(response.status_code, 200)
++
++    @override_settings(
++        SECURE_SSL_REDIRECT=True,
++        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
++        SECURE_REDIRECT_EXEMPT=[r"^healthz/$"],
++    )
++    def test_the_other_pages_still_force_https(self):
++        response = self.client.get("/accounts/login/", secure=False)
++        self.assertEqual(response.status_code, 301)
+diff --git a/problems/views.py b/problems/views.py
+index b6b011b..73d2df2 100644
+--- a/problems/views.py
++++ b/problems/views.py
+@@ -574,3 +574,13 @@ def signup_view(request):
+ @login_required
+ def dashboard_redirect(request):  # pragma: no cover - convenience alias
+     return redirect("dashboard")
++
++
++def healthz(request):
++    """Sonde de santé — la seule page qui répond sans connexion ni HTTPS forcé.
++
++    Les plateformes d'hébergement interrogent cette adresse pendant le déploiement
++    (*Health Check Path*). Elle ne dépend donc de rien : ni base de données, ni session,
++    ni redirection. Une 301 y serait comptée comme un échec de déploiement.
++    """
++    return JsonResponse({"status": "ok", "service": "arch-arena"})
+diff --git a/render.yaml b/render.yaml
+index e13d7b7..c746994 100644
+--- a/render.yaml
++++ b/render.yaml
+@@ -13,7 +13,7 @@ services:
+     runtime: docker
+     plan: free            # gratuit = endormi après 15 min et disque non attachable
+     dockerfilePath: ./Dockerfile
+-    healthCheckPath: /accounts/login/
++    healthCheckPath: /healthz/     # 200 sans base ni HTTPS (voir settings_production)
+     envVars:
+       - key: DJANGO_SETTINGS_MODULE
+         value: config.settings_production

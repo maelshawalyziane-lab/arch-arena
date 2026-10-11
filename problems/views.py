@@ -574,3 +574,13 @@ def signup_view(request):
 @login_required
 def dashboard_redirect(request):  # pragma: no cover - convenience alias
     return redirect("dashboard")
+
+
+def healthz(request):
+    """Sonde de santé — la seule page qui répond sans connexion ni HTTPS forcé.
+
+    Les plateformes d'hébergement interrogent cette adresse pendant le déploiement
+    (*Health Check Path*). Elle ne dépend donc de rien : ni base de données, ni session,
+    ni redirection. Une 301 y serait comptée comme un échec de déploiement.
+    """
+    return JsonResponse({"status": "ok", "service": "arch-arena"})

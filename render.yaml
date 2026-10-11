@@ -13,7 +13,7 @@ services:
     runtime: docker
     plan: free            # gratuit = endormi après 15 min et disque non attachable
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /accounts/login/
+    healthCheckPath: /healthz/     # 200 sans base ni HTTPS (voir settings_production)
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings_production
