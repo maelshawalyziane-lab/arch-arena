@@ -3,10 +3,10 @@
 Cours rédigé à partir du chapitre 1 « Divisibility » (pp. 13–43). Problemset : 15 problèmes
 extraits de la section 1.12, avec indices et solutions rédigés pour ARCH Arena.
 
-Statuts à relire avant publication :
+Statuts à relire :
 - problème 8 : énoncé faux tel qu'écrit (contre-exemple a = 7, b = 14) ;
 - problèmes 10, 11, 12, 13 et 15 : solution incomplète, marquée comme telle dans le champ solution.
-Le cours est publié avec published=False.
+Le cours est publié (published=True).
 """
 
 from datetime import date
@@ -18,7 +18,7 @@ COURSES = [
         "title": "Divisibilité : bases",
         "available_from": date(2026, 10, 19),
         "planning_label": "Semaine 1 · à confirmer",
-        "published": False,
+        "published": True,
         "theory_md": r"""
 Ce chapitre est la porte d'entrée de la théorie des nombres. La divisibilité engendre une foule de définitions et de résultats : on y étudie les multiples, la division euclidienne, les nombres premiers, le PGCD et le PPCM, l'identité de Bézout et les systèmes de numération.
 
